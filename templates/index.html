@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI SOC Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background: #2980b9; }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .threat { background: #ffebee; border-left: 4px solid #e74c3c; }
+        .safe { background: #e8f5e9; border-left: 4px solid #2ecc71; }
+        .error { background: #fef9e7; border-left: 4px solid #f39c12; }
+    </style>
+</head>
+<body>
+    <h1>AI SOC Analyzer</h1>
+    <p>Paste a log line (firewall, SSH, web server, etc.) and let AI detect threats.</p>
+
+    <textarea id="logInput" placeholder="Example: Oct 29 10:30:22 server sshd[1234]: Failed password for root from 192.168.1.100 port 2222 ssh2"></textarea>
+    <br>
+    <button onclick="analyzeLog()">Analyze with Gemini AI</button>
+
+    <div id="result"></div>
+
+    <script>
+        async function analyzeLog() {
+            const log = document.getElementById('logInput').value;
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'error';
+            resultDiv.innerHTML = '<b>? Analyzing...</b>';
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ log: log })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.threat_detected) {
+                        resultDiv.className = 'threat';
+                        resultDiv.innerHTML = `
+                            <b>⚠️🚨 Threat Detected!</b><br>
+                            <b>Type:</b> ${data.threat_type}<br>
+                            <b>Confidence:</b> ${data.confidence}<br>
+                            <b>Recommendation:</b> ${data.recommendation}
+                        `;
+                    } else {
+                        resultDiv.className = 'safe';
+                        resultDiv.innerHTML = `
+                            <b>✅🟢 No Threat Detected</b><br>
+                            <b>Recommendation:</b> ${data.recommendation}
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = `<b>? Error:</b> ${data.error || 'Unknown error'}`;
+                }
+            } catch (err) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<b>? Network Error:</b> ${err.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
