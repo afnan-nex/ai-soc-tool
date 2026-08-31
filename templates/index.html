@@ -4,98 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI SOC Tool</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 20px;
-            background: #f9f9f9;
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-        }
-        textarea {
-            width: 100%;
-            height: 150px;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        button {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover { background: #2980b9; }
-        #result {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 6px;
-            display: none;
-        }
-        .threat { background: #ffebee; border-left: 4px solid #e74c3c; }
-        .safe { background: #e8f5e9; border-left: 4px solid #2ecc71; }
-        .error { background: #fef9e7; border-left: 4px solid #f39c12; }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@materialstyle/materialstyle@3.1.1/dist/css/materialstyle.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <h1>AI SOC Analyzer</h1>
-    <p>Paste a log line (firewall, SSH, web server, etc.) and let AI detect threats.</p>
+<body class="dark">
+    <div class="scanline-overlay"></div>
+    <div class="container">
+        <h1 class="glitch" data-text="AI SOC Analyzer">AI SOC Analyzer</h1>
+        <p>Paste a log line (firewall, SSH, web server, etc.) and let AI detect threats.</p>
 
-    <textarea id="logInput" placeholder="Example: Oct 29 10:30:22 server sshd[1234]: Failed password for root from 192.168.1.100 port 2222 ssh2"></textarea>
-    <br>
-    <button onclick="analyzeLog()">Analyze with Gemini AI</button>
+        <div class="text-field-container">
+            <textarea id="logInput" class="text-field" placeholder="Example: Oct 29 10:30:22 server sshd[1234]: Failed password for root from 192.168.1.100 port 2222 ssh2"></textarea>
+        </div>
 
-    <div id="result"></div>
+        <div class="button-container">
+            <button class="filled-button" onclick="analyzeLog('gemini')">Analyze with Gemini AI</button>
+            <button class="filled-button" onclick="analyzeLog('deepseek')">Analyze with DeepSeek</button>
+            <button class="filled-button" onclick="analyzeLog('qwen')">Analyze with Qwen</button>
+        </div>
+
+        <div id="result" class="card"></div>
+    </div>
 
     <script>
-        async function analyzeLog() {
+        async function analyzeLog(model) {
             const log = document.getElementById('logInput').value;
             const resultDiv = document.getElementById('result');
             resultDiv.style.display = 'block';
-            resultDiv.className = 'error';
+            resultDiv.className = 'card error';
             resultDiv.innerHTML = '<b>? Analyzing...</b>';
 
             try {
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ log: log })
+                    body: JSON.stringify({ log: log, model: model })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
                     if (data.threat_detected) {
-                        resultDiv.className = 'threat';
+                        resultDiv.className = 'card threat';
                         resultDiv.innerHTML = `
-                            <b>⚠️🚨 Threat Detected!</b><br>
-                            <b>Type:</b> ${data.threat_type}<br>
-                            <b>Confidence:</b> ${data.confidence}<br>
-                            <b>Recommendation:</b> ${data.recommendation}
+                            <b style="font-size:22px; font-weight:bold; color:red;">⚠️🚨 Threat Detected!</b><br>
+                            <b style="font-size:18px;">Type:</b><br> <span style="font-size:16px">${data.threat_type}</span> <br>
+                            <b style="font-size:18px;">Confidence:</b><br> <span style="font-size:16px">${data.confidence}</span> <br>
+                            <b style="font-size:18px;">Recommendation:</b><br> <span style="font-size:16px">${data.recommendation}</span> <br>
+                            <b style="font-size:18px;">How to do:</b><br> <span style="font-size:16px">${data.how_to_do}</span>
                         `;
                     } else {
-                        resultDiv.className = 'safe';
+                        resultDiv.className = 'card safe';
                         resultDiv.innerHTML = `
-                            <b>✅🟢 No Threat Detected</b><br>
-                            <b>Recommendation:</b> ${data.recommendation}
+                            <b style="font-size:22px; font-weight:bold;">✅🟢 No Threat Detected</b><br>
+                            <b style="font-size:18px;">Recommendation:</b><br> <span style="font-size:16px">${data.recommendation}</span>
                         `;
                     }
                 } else {
-                    resultDiv.className = 'error';
+                    resultDiv.className = 'card error';
                     resultDiv.innerHTML = `<b>? Error:</b> ${data.error || 'Unknown error'}`;
                 }
             } catch (err) {
-                resultDiv.className = 'error';
+                resultDiv.className = 'card error';
                 resultDiv.innerHTML = `<b>? Network Error:</b> ${err.message}`;
             }
         }
